@@ -82,10 +82,26 @@ pm2 startup && pm2 save
 
 ### 4. 初始化口味档案（DJ 的"灵魂"）
 
-编辑 `user/taste.md` 写下你的听歌偏好（题材/语种/情绪偏好/雷区），
-或在 `user/routines.md` 里定义你的一天作息（几 点起床/专注/睡觉）。
+**方式 A：自动蒸馏（推荐）**——从你的真实网易云数据蒸馏出画像：
 
-进阶：`distill-taste.js` 可以从你的真实网易云数据自动蒸馏画像（需要官方 CLI 登录态），玩法见脚本内注释。
+```bash
+# ① ncm-cli 扫码登录（只需一次）
+node node_modules/@music163/ncm-cli/dist/index.js login
+
+# ② 一键采集：红心歌单 + 听歌排行（自动写入 .data/）
+node collect-data.js
+
+# ③ （可选）额外收录一个收藏歌单——分享链接里的数字 ID
+node collect-data.js 747382328
+
+# ④ 调用 DeepSeek 蒸馏成 taste.md
+node distill-taste.js
+```
+
+**方式 B：手写**——直接编辑 `user/taste.md`，格式参考 `distill-taste.js` 里的 prompt 结构
+（核心画像 / 歌手权重 / 风格分布 / 场景推断 / 宝藏与雷区 / 编播建议）。
+
+两种方式都在 `user/routines.md` 里定义你的一天作息（几点起床/专注/睡觉）。档案页可随时查看蒸馏结果。
 
 ### 5. 打开
 

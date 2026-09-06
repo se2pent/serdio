@@ -1,11 +1,21 @@
 // distill-taste.js — 把 红心歌单 + 收藏歌单(去重合并) + 听歌排行 蒸馏成 user/taste.md
-// 数据：.data/fav-page1.json（红心）+ .data/pl-raw.json（《士卿_喜欢的音乐》）+ .data/ranking.json（听歌排行）
+// 数据：.data/fav-page1.json（红心）+ .data/pl-raw.json（收藏歌单，可选）+ .data/ranking.json（听歌排行）
+// 采集：先 `node collect-data.js [歌单数字ID]` 一键生成
 const fs = require("fs");
 const path = require("path");
 const config = require("./src/config");
 
+// 数据文件预检：缺了就告诉用户怎么采
+const NEED = ["fav-page1.json", "ranking.json"]; // pl-raw.json 可选
+const missing = NEED.filter(f => !fs.existsSync(path.join(__dirname, ".data", f)));
+if (missing.length) {
+  console.error("❌ 缺少个人数据文件：", missing.join(", "));
+  console.error("   先采集：node collect-data.js [可选:收藏歌单数字ID]");
+  process.exit(1);
+}
+
 const fav = require("./.data/fav-page1.json");
-const pl = require("./.data/pl-raw.json");
+const pl = (() => { try { return require("./.data/pl-raw.json"); } catch { return null; } })();
 const ranking = require("./.data/ranking.json");
 
 // 压缩数据：只保留蒸馏需要的字段
