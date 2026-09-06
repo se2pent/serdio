@@ -1,0 +1,15 @@
+{
+  "name": "Serdio · 个人 AI 电台",
+  "short_name": "Serdio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d10",
+  "theme_color": "#0d0d10",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📻</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

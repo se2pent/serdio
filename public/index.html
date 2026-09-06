@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0d10">
+  <meta name="description" content="Serdio · 个人 AI 电台：读懂你的听歌口味，像 DJ 一样为你编排声音">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta property="og:title" content="Serdio · 个人 AI 电台">
+  <meta property="og:description" content="读懂你的听歌口味，像 DJ 一样为你编排声音">
+  <link rel="manifest" href="/manifest.json">
+  <title>Serdio · 个人 AI 电台</title>
+  <link rel="stylesheet" href="/fonts/index.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="wx-cloudy">
+  <!-- 访问令牌输入层（服务器启用 API_TOKEN 时出现） -->
+  <div id="auth-overlay" hidden>
+    <div class="auth-box">
+      <div class="auth-logo">📻 Serdio</div>
+      <p class="auth-tip">本电台已上锁，请输入访问密码</p>
+      <input id="auth-token" type="password" placeholder="访问密码" autocomplete="off">
+      <button id="btn-auth">进入电台</button>
+      <div class="auth-err" id="auth-err"></div>
+    </div>
+  </div>
+  <div id="app">
+    <!-- 顶栏 -->
+    <header class="topbar">
+      <div class="logo">📻 <span>Serdio</span></div>
+      <div class="slot-badge" id="slot-badge">—</div>
+    </header>
+
+    <!-- 视图容器 -->
+    <main>
+      <!-- PLAYER 视图：聊天式布局 -->
+      <section id="view-player" class="view active">
+        <!-- 迷你播放器：翻阅聊天时收起到这里 -->
+        <div class="mini-bar" id="mini-bar" hidden>
+          <div class="mb-info">
+            <div class="mb-title" id="mb-title">—</div>
+            <div class="mb-artist" id="mb-artist"></div>
+          </div>
+          <div class="eq" id="eq-mini" hidden title="正在播放">
+            <i></i><i></i><i></i><i></i>
+          </div>
+          <button class="ctrl small" id="mb-play" title="播放/暂停">▶</button>
+          <button class="ctrl small" id="mb-next" title="下一首">⏭</button>
+          <div class="mb-progress" id="mb-progress"><div class="mb-progress-fill" id="mb-progress-fill"></div></div>
+        </div>
+
+        <!-- 展开区：时钟 + DJ 卡 + 队列 + 大控件 -->
+        <div id="player-zone">
+          <!-- 日期时间牌：颜色随天气换装 -->
+          <div class="clock-card" id="clock-card">
+            <div class="clock-time" id="clock-time">--:--</div>
+            <div class="clock-date" id="clock-date">LOADING…</div>
+            <div class="clock-wx" id="clock-wx"></div>
+          </div>
+
+          <div class="now-card">
+            <div class="dj-avatar" id="dj-speaking">🎙️</div>
+            <p class="dj-say" id="dj-say">正在接入电台…</p>
+            <p class="dj-reason" id="dj-reason"></p>
+          </div>
+          <div class="queue" id="queue"></div>
+          <div class="player-bar">
+            <audio id="audio" preload="auto"></audio>
+            <button class="ctrl" id="btn-prev" title="上一首">⏮</button>
+            <button class="ctrl big" id="btn-play" title="播放/暂停">▶</button>
+            <button class="ctrl" id="btn-next" title="下一档">⏭</button>
+            <!-- 正在播放动效：像素均衡器 -->
+            <div class="eq" id="eq" hidden title="正在播放">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <div class="play-hint" id="play-hint"></div>
+          <div class="progress" id="progress" hidden>
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <div class="progress-time" id="progress-time" hidden>--:-- / --:--</div>
+          <div class="tts-bar" id="tts-bar" hidden>
+            <button class="ctrl small" id="btn-tts-play">🔊 播放 DJ 语音</button>
+          </div>
+        </div>
+
+        <!-- 聊天流（Telegram 式，唯一滚动区） -->
+        <div class="chat-wrap" id="chat-wrap">
+          <div class="chat-list" id="chat-list"></div>
+        </div>
+      </section>
+
+      <!-- PROFILE 视图 -->
+      <section id="view-profile" class="view">
+        <h2>口味档案</h2>
+        <div class="profile-tabs">
+          <button data-tab="taste" class="on">taste</button>
+          <button data-tab="routines">routines</button>
+          <button data-tab="moodRules">mood-rules</button>
+          <button data-tab="recent">最近播放</button>
+        </div>
+        <div id="profile-content" class="profile-pre profile-md">加载中…</div>
+      </section>
+
+      <!-- SETTINGS 视图 -->
+      <section id="view-settings" class="view">
+        <h2>设置</h2>
+
+        <div class="set-group-title">API 配置</div>
+        <div class="set-row col">
+          <label>DeepSeek API Key（大脑）</label>
+          <input id="set-deepseek" type="password" placeholder="sk-…（留空不修改）" autocomplete="off">
+          <div class="key-status" id="key-deepseek-status"></div>
+        </div>
+        <div class="set-row col">
+          <label>MiMo API Key（声音）</label>
+          <input id="set-mimo" type="password" placeholder="sk-…（留空不修改）" autocomplete="off">
+          <div class="key-status" id="key-mimo-status"></div>
+        </div>
+        <div class="set-row col">
+          <label>DJ 音色</label>
+          <select id="set-voice"></select>
+        </div>
+        <div class="save-bar">
+          <button id="btn-save-settings">保存并生效</button>
+          <span class="city-status" id="settings-status"></span>
+        </div>
+
+        <div class="set-group-title">天气城市</div>
+        <div class="set-row col">
+          <label>天气城市</label>
+          <div class="city-picker">
+            <select id="city-preset">
+              <option value="">— 选择城市 —</option>
+              <option>北京</option><option>上海</option><option>广州</option>
+              <option>深圳</option><option>杭州</option><option>成都</option>
+              <option>武汉</option><option>西安</option><option>重庆</option>
+              <option>南京</option><option>长沙</option><option>青岛</option>
+              <option>天津</option><option>苏州</option><option>厦门</option>
+              <option>大连</option><option>昆明</option><option>哈尔滨</option>
+            </select>
+            <input id="city-custom" placeholder="或输入任意城市名">
+            <button id="btn-city">切换</button>
+          </div>
+          <div class="city-status" id="city-status"></div>
+        </div>
+        <div class="set-group-title">网易云音乐账号</div>
+        <div class="set-row col">
+          <div class="ncm-status" id="ncm-login-status">检测中…</div>
+          <div class="ncm-qr-area" id="ncm-qr-area" hidden>
+            <img id="ncm-qr-img" class="ncm-qr" alt="扫码登录">
+            <div class="ncm-qr-hint" id="ncm-qr-hint">网易云 App → 扫一扫</div>
+          </div>
+          <div>
+            <button id="btn-ncm-login">扫码登录 / 重新登录</button>
+            <button id="btn-ncm-logout" class="ghost-btn">退出登录</button>
+          </div>
+        </div>
+
+        <div class="set-group-title">服务状态</div>
+        <div class="set-row">
+          <label>大脑</label>
+          <span id="set-brain" class="status">检测中…</span>
+        </div>
+        <div class="set-row">
+          <label>声音 (MiMo TTS)</label>
+          <span id="set-tts" class="status">检测中…</span>
+        </div>
+        <div class="set-row">
+          <label>音乐源</label>
+          <span id="set-ncm" class="status">检测中…</span>
+        </div>
+        <p class="hint">Key 保存在本机数据库中；留空表示不修改，保存后立即生效，无需重启。</p>
+      </section>
+    </main>
+
+    <!-- 聊天输入 -->
+    <footer class="chat-bar">
+      <input id="chat-input" placeholder="跟 DJ 说点什么…（比如：下雨了，来点钢琴）">
+      <button id="btn-send">发送</button>
+    </footer>
+
+    <!-- 底部导航 -->
+    <nav class="tabbar">
+      <button data-view="player" class="on">▶ 电台</button>
+      <button data-view="profile">♡ 档案</button>
+      <button data-view="settings">⚙ 设置</button>
+    </nav>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

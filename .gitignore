@@ -1,0 +1,21 @@
+# ===== 密钥与个人数据（绝对不能上传）=====
+.env
+.data/
+data/
+user/
+tts-cache/
+logs-*.txt
+Serdio.apk
+服务器托管-接入指南.txt
+
+# ===== 依赖与构建产物（可随时重新生成）=====
+node_modules/
+android/
+
+# ===== 系统杂项 =====
+.DS_Store
+Thumbs.db
+*.log
+
+# ===== DJ 人格提示词（灵魂，不外传）=====
+prompts/

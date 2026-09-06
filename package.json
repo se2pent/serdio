@@ -1,0 +1,20 @@
+{
+  "name": "serdio",
+  "version": "0.1.0",
+  "description": "Serdio — 个人 AI 电台：读懂听歌习惯 → 规划声音 → 像 DJ 那样播报",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.2",
+    "@capacitor/cli": "^6.2.2",
+    "@capacitor/core": "^6.2.2",
+    "@fontsource/fusion-pixel-12px-proportional-sc": "^5.3.0",
+    "@music163/ncm-cli": "^0.1.7",
+    "@neteaseapireborn/api": "^4.29.13",
+    "express": "^4.22.2",
+    "ws": "^8.21.3"
+  }
+}

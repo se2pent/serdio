@@ -1,0 +1,10 @@
+{
+  "appId": "com.serdio.radio",
+  "appName": "Serdio",
+  "webDir": "public",
+  "server": {
+    "url": "http://124.70.36.219:8080",
+    "cleartext": true,
+    "androidScheme": "http"
+  }
+}
