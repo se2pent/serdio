@@ -1,7 +1,9 @@
 // scheduler.js — 节律调度：07:00 规划 · 09:00 早间档 · 小时情绪检查 · 日历 hook
+// 可通过 .env 的 SCHEDULER_ENABLED=false 整体关闭（定时推送每次都烧 API 额度）
 const context = require("./context");
 const brain = require("./brain");
 const state = require("./state");
+const config = require("./config");
 const { orchestrate } = require("./dj");
 
 // 档位触发表（分钟级轮询，命中即触发）
@@ -74,6 +76,10 @@ async function fireHourlyMoodCheck() {
 }
 
 function start() {
+  if (!config.schedulerEnabled) {
+    console.log("[scheduler] 节律调度已关闭（.env: SCHEDULER_ENABLED=false）—— DJ 只在你主动召唤时工作");
+    return;
+  }
   setInterval(tick, 30 * 1000); // 每 30s 轮询
   console.log("[scheduler] 节律调度已启动（30s 轮询）");
 }

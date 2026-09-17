@@ -36,4 +36,7 @@ module.exports = {
   },
   port: parseInt(process.env.PORT || "8080", 10),
   token: process.env.API_TOKEN || "", // 访问令牌：.env 设置后开启，公网防裸奔
+  // 节律调度开关：定时推送聊天（晨间唤醒/时段编排/整点情绪检查）每次都烧 API 额度
+  // .env 设 SCHEDULER_ENABLED=false 关闭；不设或 true 开启
+  schedulerEnabled: process.env.SCHEDULER_ENABLED !== "false",
 };

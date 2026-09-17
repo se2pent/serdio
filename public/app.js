@@ -21,6 +21,7 @@ document.querySelectorAll(".tabbar button").forEach(btn => {
     $("#view-" + btn.dataset.view).classList.add("active");
     // 聊天输入栏只属于电台视图
     document.querySelector(".chat-bar").style.display = btn.dataset.view === "player" ? "" : "none";
+    if (btn.dataset.view !== "player") $("#btn-top").hidden = true; // 离开电台视图藏回顶钮
     if (btn.dataset.view === "profile") loadProfile("taste");
     if (btn.dataset.view === "settings") loadSettings();
   });
@@ -86,7 +87,7 @@ function esc(s) { const d = document.createElement("div"); d.textContent = s || 
 function escAttr(s) { return esc(s).replace(/"/g, "&quot;"); }
 
 /* ---------- 聊天流：DJ 气泡内可交互队列 ---------- */
-function addChat(role, text, queue) {
+function addChat(role, text, queue, speechUrl, speechId) {
   // 去重：连续相同的 DJ 消息不重复入流（如页面刷新时历史重放）
   const last = chatList.querySelector(".msg:last-child");
   if (last && last.classList.contains(role) &&
@@ -108,6 +109,7 @@ function addChat(role, text, queue) {
         <div class="cq-info">
           <div class="cq-title">${esc(t.title)}</div>
           <div class="cq-artist">${esc(t.artist)}</div>
+          <div class="cq-lyric"></div>
         </div>
         <button class="cq-btn" data-act="like" title="喜欢">♡</button>
         <button class="cq-btn" data-act="skip" title="跳过">⏭</button>
@@ -119,22 +121,52 @@ function addChat(role, text, queue) {
     <div class="msg-body">
       <div class="msg-name">${role === "user" ? "YOU" : "SERDIO"}</div>
       <div class="bubble" data-say="${escAttr(text)}">${esc(text)}</div>
-      <div class="msg-time">${time}</div>
+      <div class="msg-foot">
+        <span class="msg-time">${time}</span>
+        ${role === "dj" ? `<button class="replay-btn" data-id="${speechId || ""}" ${speechUrl ? `data-url="${escAttr(speechUrl)}"` : ""} title="重播这段语音">talking</button>` : ""}
+      </div>
       ${queueHtml}
     </div>`;
   chatList.appendChild(el);
   scrollBottom(role === "user");
 }
 
-// 聊天内队列与当前播放状态同步（正在播的卡片亮情绪色 + ★）
+// DJ 语音重播（事件委托）：有 URL 直接播；老消息现场合成后落库再播
+chatList.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".replay-btn");
+  if (!btn) return;
+  e.stopPropagation();
+  let url = btn.dataset.url;
+  if (!url) {
+    btn.textContent = "synth…";
+    try {
+      const j = await (await fetch("/api/tts/replay", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: btn.dataset.id }),
+      })).json();
+      url = j.url;
+      if (url) btn.dataset.url = url;
+    } catch { /* 网络错误 */ }
+    btn.textContent = "talking";
+    if (!url) { btn.textContent = "talking ✗"; setTimeout(() => btn.textContent = "talking", 1500); return; }
+  }
+  audio.onended = () => setMode(null);
+  audio.src = url;
+  setMode("speech");
+  audio.play().catch(() => { $("#play-hint").textContent = "▶ 点一下屏幕再试（浏览器限制）"; });
+});
+
+// 聊天内队列与当前播放状态同步（正在播的卡片亮情绪色 + ★ + 当前歌词句）
 function syncChatQueues() {
   const live = chatList.querySelector(".msg.live");
   if (!live) return;
+  const curLine = state.mode === "music" && lyricLines[lyricIdx] ? lyricLines[lyricIdx].text : "";
   live.querySelectorAll(".cq-row").forEach(row => {
     const i = +row.dataset.i;
     const isCur = i === state.idx && state.mode === "music";
     row.classList.toggle("playing", isCur);
     row.querySelector(".cq-play").textContent = isCur ? "★" : "▶";
+    row.querySelector(".cq-lyric").textContent = isCur ? curLine : "";
   });
 }
 
@@ -163,7 +195,7 @@ async function loadHistory() {
   try {
     const j = await (await fetch("/api/history")).json();
     for (const m of j.messages || []) {
-      addChat(m.role === "user" ? "user" : "dj", m.content, null);
+      addChat(m.role === "user" ? "user" : "dj", m.content, null, m.speech_url, m.id);
     }
     scrollBottom(true);
   } catch { /* 忽略 */ }
@@ -178,14 +210,52 @@ scroller.addEventListener("wheel", () => { compactArmed = true; }, { passive: tr
 scroller.addEventListener("touchstart", () => { compactArmed = true; }, { passive: true });
 
 scroller.addEventListener("scroll", () => {
+  updateTopFab(); // 回顶钮显隐（滚过 300px 出现）
   if (!compactArmed) return;
-  if (!state.compact) zoneH = $("#player-zone").offsetHeight || zoneH; // 隐藏前记住高度
-  const wantCompact = scroller.scrollTop > zoneH - 24;
-  if (wantCompact === state.compact) return;
-  state.compact = wantCompact;
-  $("#mini-bar").hidden = !wantCompact;
-  $("#player-zone").style.display = wantCompact ? "none" : "";
-  if (wantCompact) { syncMiniBar(); scroller.scrollTop = Math.max(0, scroller.scrollTop); }
+
+  if (!state.compact) {
+    // 展开态：滚过整个展开区 → 收起
+    zoneH = $("#player-zone").offsetHeight || zoneH;
+    if (scroller.scrollTop > zoneH - 24) {
+      state.compact = true;
+      $("#mini-bar").hidden = false;
+      $("#player-zone").style.display = "none";
+      syncMiniBar();
+      scroller.scrollTop = Math.max(0, scroller.scrollTop);
+    }
+  } else if (scroller.scrollTop <= 24) {
+    // 收起态：滚回最顶端才展开（与收起阈值拉开距离，防振荡）
+    state.compact = false;
+    $("#mini-bar").hidden = true;
+    $("#player-zone").style.display = "";
+  }
+});
+
+/* ---------- 回到顶部按钮 ---------- */
+function updateTopFab() {
+  const inPlayer = !!document.querySelector("#view-player.active");
+  $("#btn-top").hidden = !inPlayer || scroller.scrollTop < 300;
+}
+$("#btn-top").addEventListener("click", () => {
+  compactArmed = false; // 平滑滚动途中不再触发收起，防振荡
+  scroller.scrollTo({ top: 0, behavior: "smooth" });
+  // 回顶同时展开电台区，看到完整 DJ 卡
+  state.compact = false;
+  $("#mini-bar").hidden = true;
+  $("#player-zone").style.display = "";
+});
+
+/* ---------- 清屏聊天（只清界面，DJ 的记忆保留在服务器） ---------- */
+$("#btn-clear").addEventListener("click", () => {
+  if (!chatList.children.length) return;
+  if (!confirm("清屏只收起聊天界面，DJ 的记忆和播放记录都保留。继续？")) return;
+  chatList.innerHTML = "";
+  state.compact = false;
+  compactArmed = false;
+  $("#mini-bar").hidden = true;
+  $("#player-zone").style.display = "";
+  scroller.scrollTop = 0;
+  addChat("dj", "🧹 聊天已清屏。我的记忆还在，随时点歌或聊两句。", null);
 });
 
 function syncMiniBar() {
@@ -208,8 +278,7 @@ function renderPlan(plan, auto = true) {
     $("#dj-say").textContent = plan.say;
     $("#dj-reason").textContent = plan.reason ? "编排理由：" + plan.reason : "";
     pulseDJ();
-    addChat("dj", plan.say, hasQueue ? plan.queue : null);
-  }
+    addChat("dj", plan.say, hasQueue ? plan.queue : null, plan.speechUrl);  }
   $("#slot-badge").textContent = SLOT_NAMES[plan.slot] || plan.slot || "—";
 
   if (hasQueue) {
@@ -221,7 +290,14 @@ function renderPlan(plan, auto = true) {
   syncMiniBar();
 
   // auto=false：页面初载只恢复界面，不自动开播
-  if (!auto) return;
+  if (!auto) {
+    // 但语音重播条要恢复（刷新后仍可重播 DJ 语音）
+    if (plan.speechUrl) {
+      state.speechUrl = plan.speechUrl;
+      $("#tts-bar").hidden = false;
+    }
+    return;
+  }
 
   const trigger = plan.trigger || "";
   const musicBusy = state.mode === "music" && !audio.paused;
@@ -311,10 +387,58 @@ function bindTrackActions() {
   });
 }
 
+/* ---------- 歌词显示 ---------- */
+let lyricLines = [];   // [{t(秒), text}]
+let lyricIdx = -1;
+
+// 解析 LRC：支持一行多时间戳 [00:01.02][00:05]歌词
+function parseLrc(lrc) {
+  const out = [];
+  for (const raw of (lrc || "").split("\n")) {
+    const stamps = [...raw.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+    if (!stamps.length) continue;
+    const text = raw.replace(/\[[^\]]*\]/g, "").trim();
+    for (const m of stamps) out.push({ t: (+m[1]) * 60 + (+m[2]), text });
+  }
+  return out.sort((a, b) => a.t - b.t).filter(l => l.text);
+}
+
+function setLyrics(lrc) {
+  lyricLines = parseLrc(lrc);
+  lyricIdx = -1;
+  const box = $("#lyrics");
+  const inner = $("#lyrics-inner");
+  if (!lyricLines.length) { box.hidden = true; inner.innerHTML = ""; return; }
+  inner.innerHTML = lyricLines.map((l, i) => `<div class="lyr" data-i="${i}">${esc(l.text)}</div>`).join("");
+  box.hidden = false;
+}
+
+function syncLyrics() {
+  if (!lyricLines.length || state.mode !== "music") return;
+  const t = audio.currentTime + 0.3; // 轻微提前，对齐感知
+  let i = lyricIdx;
+  if (i >= 0 && lyricLines[i] && t >= lyricLines[i].t && (i + 1 >= lyricLines.length || t < lyricLines[i + 1].t)) return; // 未换行
+  i = lyricLines.findIndex(l => l.t > t) - 1;
+  if (i < -1) i = lyricLines.length - 1;
+  if (i === lyricIdx) return;
+  lyricIdx = i;
+  const inner = $("#lyrics-inner");
+  inner.querySelectorAll(".lyr.on").forEach(el => el.classList.remove("on"));
+  if (i < 0) return; // 前奏未开唱
+  const el = inner.querySelector(`.lyr[data-i="${i}"]`);
+  if (el) {
+    el.classList.add("on");
+    const box = $("#lyrics");
+    box.scrollTop = el.offsetTop - box.clientHeight / 2 + el.offsetHeight / 2;
+  }
+  syncChatQueues(); // 歌词句同步到聊天流的正在播放卡片
+}
+
 async function playAt(i) {
   if (i < 0 || i >= state.queue.length) return;
   state.idx = i;
   const t = state.queue[i];
+  setLyrics(t.lyric); // 随歌换词
   state.mode = "music";
   setMode("music");
   audio.onended = null;
@@ -411,7 +535,7 @@ audio.addEventListener("loadedmetadata", () => {
   $("#mb-progress-fill").style.width = "0%";
   $("#progress-time").textContent = `00:00 / ${fmt(audio.duration)}`;
 });
-audio.addEventListener("timeupdate", updateProgress);
+audio.addEventListener("timeupdate", () => { updateProgress(); syncLyrics(); });
 
 $("#progress").addEventListener("click", (e) => {
   if (!isFinite(audio.duration) || !audio.duration) return;
@@ -669,6 +793,16 @@ $("#btn-ncm-logout").addEventListener("click", async () => {
     $("#ncm-login-status").textContent = "退出失败：" + e.message;
   }
 });
+
+/* ---------- SW 更新自动生效（根治"刷两次"） ---------- */
+if ("serviceWorker" in navigator) {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloading) return;
+    reloading = true;
+    location.reload(); // 新 SW 接管时自动刷新一次，用户无感升级
+  });
+}
 
 /* ---------- 访问令牌 ---------- */
 function showAuth() {

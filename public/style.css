@@ -71,9 +71,28 @@ body.wx-thunder { --mood: #a678e8; --mood-glow: rgba(166, 120, 232, .45); }
 
 .topbar {
   display: flex; justify-content: space-between; align-items: center;
+  gap: 10px;
   padding: 14px 18px; border-bottom: 2px solid var(--line);
 }
 .logo { font-weight: 700; font-size: 18px; letter-spacing: 1px; }
+.tb-btn {
+  background: none; border: 1px solid var(--line); color: var(--text);
+  border-radius: 8px; padding: 4px 9px; cursor: pointer;
+  font-size: 14px; font-family: inherit; flex-shrink: 0;
+}
+.tb-btn:hover { border-color: var(--mood); color: var(--mood); }
+
+/* ---- 回到顶部悬浮钮 ---- */
+.top-fab {
+  position: fixed; right: 16px; bottom: 140px; z-index: 60;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--mood); color: var(--mood);
+  font-size: 16px; font-family: inherit; cursor: pointer;
+  box-shadow: 0 0 10px var(--mood-glow);
+  animation: fadein .2s steps(3);
+}
+.top-fab:active { background: var(--mood); color: #141414; }
+.top-fab[hidden] { display: none; }
 .logo span { color: var(--mood); text-shadow: 0 0 8px var(--mood-glow); transition: color .8s; }
 .slot-badge {
   font-size: 12px; color: var(--muted); background: var(--panel);
@@ -91,6 +110,25 @@ main { flex: 1; min-height: 0; overflow: hidden; padding: 0; display: flex; }
   -webkit-overflow-scrolling: touch;
 }
 #player-zone { padding: 16px 18px 10px; }
+
+/* ---- 歌词舞台 ---- */
+.lyrics {
+  max-height: 168px; overflow-y: auto; margin-top: 12px;
+  padding: 8px 4px; text-align: center;
+  border-top: 1px dashed var(--line);
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+.lyrics::-webkit-scrollbar { display: none; }
+.lyr {
+  font-size: 12px; line-height: 2.1; color: var(--muted);
+  transition: color .3s, font-size .3s;
+}
+.lyr.on {
+  color: var(--mood); font-size: 14px; font-weight: 700;
+  text-shadow: 0 0 8px var(--mood-glow);
+}
 
 /* ---- 访问令牌输入层 ---- */
 #auth-overlay {
@@ -176,6 +214,15 @@ main { flex: 1; min-height: 0; overflow: hidden; padding: 0; display: flex; }
   background: var(--accent); color: #141414; border-color: var(--accent);
 }
 .msg-time { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+.msg-foot { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.msg-foot .msg-time { margin-top: 0; }
+.replay-btn {
+  background: none; border: 1px solid var(--line); color: var(--muted);
+  border-radius: 10px; padding: 2px 8px; cursor: pointer;
+  font-size: 10px; font-family: inherit; letter-spacing: 1px;
+  transition: color .2s, border-color .2s;
+}
+.replay-btn:hover { color: var(--mood); border-color: var(--mood); }
 
 /* ---- 歌曲卡片：脱离气泡独立成行 ---- */
 .msg-queue {
@@ -201,6 +248,11 @@ main { flex: 1; min-height: 0; overflow: hidden; padding: 0; display: flex; }
 .cq-info { flex: 1; min-width: 0; }
 .cq-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cq-artist { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.cq-lyric {
+  font-size: 11px; color: var(--mood); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color .3s;
+}
 .cq-btn {
   background: none; border: none; color: var(--muted);
   font-size: 12px; cursor: pointer; padding: 2px 4px; font-family: inherit;

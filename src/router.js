@@ -112,6 +112,23 @@ function createRouter() {
     res.json({ messages: state.recentMessages(50) });
   });
 
+  // ⑦b POST /api/tts/replay — 老消息点重播时现场合成语音（一次性，合成后落库）
+  r.post("/api/tts/replay", async (req, res) => {
+    try {
+      const id = (req.body || {}).id;
+      if (!id) return res.status(400).json({ error: "id required" });
+      const msg = state.getMessage(id);
+      if (!msg || msg.role !== "dj") return res.status(404).json({ error: "message not found" });
+      if (msg.speech_url) return res.json({ url: msg.speech_url });
+      const speech = await tts.synthesize(msg.content);
+      state.setMessageSpeech(id, speech.url);
+      res.json({ url: speech.url });
+    } catch (e) {
+      console.error("[router] 重播合成失败:", e.message);
+      res.status(500).json({ error: "synth failed" });
+    }
+  });
+
   // ⑧ GET /api/song/url — 按需补取播放直链（点歌时链接缺失/失效的兜底）
   r.get("/api/song/url", async (req, res) => {
     try {

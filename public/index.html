@@ -30,6 +30,7 @@
     <header class="topbar">
       <div class="logo">📻 <span>Serdio</span></div>
       <div class="slot-badge" id="slot-badge">—</div>
+      <button id="btn-clear" class="tb-btn" title="清屏聊天（DJ 的记忆保留）">🧹</button>
     </header>
 
     <!-- 视图容器 -->
@@ -65,6 +66,9 @@
             <p class="dj-reason" id="dj-reason"></p>
           </div>
           <div class="queue" id="queue"></div>
+          <div class="lyrics" id="lyrics" hidden>
+            <div class="lyrics-inner" id="lyrics-inner"></div>
+          </div>
           <div class="player-bar">
             <audio id="audio" preload="auto"></audio>
             <button class="ctrl" id="btn-prev" title="上一首">⏮</button>
@@ -180,6 +184,9 @@
       <input id="chat-input" placeholder="跟 DJ 说点什么…（比如：下雨了，来点钢琴）">
       <button id="btn-send">发送</button>
     </footer>
+
+    <!-- 回到顶部（滚过电台展开区后出现） -->
+    <button id="btn-top" class="top-fab" hidden title="回到顶部">↑</button>
 
     <!-- 底部导航 -->
     <nav class="tabbar">

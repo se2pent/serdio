@@ -1,5 +1,5 @@
 // sw.js — 硬缓存外壳：断网也能打开 PWA（API 不缓存）
-const CACHE = "serdio-v18";
+const CACHE = "serdio-v23";
 const SHELL = ["/", "/index.html", "/style.css", "/app.js", "/manifest.json"];
 
 self.addEventListener("install", (e) => {

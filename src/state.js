@@ -36,12 +36,22 @@ db.exec(`
   );
 `);
 
+// 轻量迁移：messages 加 speech_url 列（DJ 语音重播用）
+try { db.exec("ALTER TABLE messages ADD COLUMN speech_url TEXT"); } catch { /* 列已存在 */ }
+
 const state = {
-  logMessage(role, content) {
-    db.prepare("INSERT INTO messages (role, content) VALUES (?, ?)").run(role, content);
+  logMessage(role, content, speechUrl) {
+    const info = db.prepare("INSERT INTO messages (role, content, speech_url) VALUES (?, ?, ?)").run(role, content, speechUrl || null);
+    return info.lastInsertRowid;
   },
   recentMessages(n = 10) {
-    return db.prepare("SELECT role, content, created_at FROM messages ORDER BY id DESC LIMIT ?").all(n).reverse();
+    return db.prepare("SELECT id, role, content, speech_url, created_at FROM messages ORDER BY id DESC LIMIT ?").all(n).reverse();
+  },
+  getMessage(id) {
+    return db.prepare("SELECT id, role, content, speech_url FROM messages WHERE id = ?").get(id);
+  },
+  setMessageSpeech(id, url) {
+    db.prepare("UPDATE messages SET speech_url = ? WHERE id = ?").run(url, id);
   },
   logPlay(track) {
     db.prepare("INSERT INTO plays (title, artist, source) VALUES (?, ?, ?)").run(

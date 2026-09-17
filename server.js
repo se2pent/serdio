@@ -32,7 +32,14 @@ app.use((req, res, next) => {
 app.use(createRouter());
 // 像素字体（fontsource 本地包）
 app.use("/fonts", express.static(path.join(__dirname, "node_modules", "@fontsource", "fusion-pixel-12px-proportional-sc")));
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), {
+  setHeaders(res, filePath) {
+    // 更新链路关键：sw 与外壳永不 HTTP 缓存，保证新版本第一次刷新就生效
+    if (filePath.endsWith("sw.js") || filePath.endsWith("index.html")) {
+      res.setHeader("Cache-Control", "no-cache");
+    }
+  },
+}));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({
@@ -78,5 +85,6 @@ server.listen(config.port, () => {
   大脑: ${config.deepseek.key && config.deepseek.key !== "PENDING" ? "DeepSeek ✅" : "未配置 Key（演示模式）"}
   声音: ${config.mimo.key && config.mimo.key !== "PENDING" ? "MiMo TTS ✅" : "未配置 Key（无语音）"}
   音乐: ${config.ncm.base}
+  调度: ${config.schedulerEnabled ? "节律推送开启" : "已关闭（SCHEDULER_ENABLED=false）"}
   `);
 });

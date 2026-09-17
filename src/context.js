@@ -62,10 +62,23 @@ async function assemble({ userInput, toolResults } = {}) {
 
   // ④ 已检索记忆
   const recentMsgs = state.recentMessages(8).map(m => `[${m.role}] ${m.content}`).join("\n") || "（暂无对话）";
-  const recentPlays = state.recentPlays(8).map(p =>
+  const recentPlayList = state.recentPlays(30);
+  const recentPlays = recentPlayList.map(p =>
     `${p.title} - ${p.artist}${p.liked ? " ♡ liked" : ""}${p.skipped ? " ⏭ skipped" : ""} @${p.played_at}`
   ).join("\n") || "（暂无播放记录）";
   const memory = `近期对话：\n${recentMsgs}\n\n近期播放：\n${recentPlays}`;
+
+  // ④b 防重复硬规则：最近播过的歌点名禁播 + 多样性指令
+  const banList = recentPlayList.map(p => "- " + p.title).join("\n");
+  const noRepeat = recentPlayList.length ? [
+    "\n===== 硬规则：防重复（必须遵守）=====",
+    "以下歌曲最近已播放过，本次编排【禁止】再出现（包括现场版/ remix / 翻唱）：",
+    banList,
+    "同时注意：",
+    "1. 不要每次都推荐同一批「安全曲目」——优先探索口味档案里喜爱歌手的【其他作品】，或档案提到但近期没播的宝藏",
+    "2. 至少一首是近期播放记录里从未出现过的歌",
+    "3. taste.md 中引用的曲目名只是「喜欢的人 Signal」，不是可以直接复读的菜单",
+  ].join("\n") : "";
 
   // ⑥ 执行轨迹
   const today = now.toISOString().slice(0, 10);
@@ -79,8 +92,9 @@ async function assemble({ userInput, toolResults } = {}) {
     "\n===== 用户口味档案 =====\n" + profile,
     "\n===== 当前环境 =====\n" + envText,
     "\n===== 记忆（检索）=====\n" + memory,
+    noRepeat,
     "\n===== 今日执行轨迹 =====\n" + trajectory,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   // ⑤ 用户输入 / 工具结果
   const userTurn = [
